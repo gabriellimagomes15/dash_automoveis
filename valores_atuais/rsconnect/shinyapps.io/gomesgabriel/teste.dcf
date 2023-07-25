@@ -1,0 +1,11 @@
+name: teste
+title:
+username:
+account: gomesgabriel
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 6973118
+bundleId: 6288492
+url: https://gomesgabriel.shinyapps.io/teste/
+when: 1662828786.74603
+lastSyncTime: 1662828786.74605
