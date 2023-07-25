@@ -34,7 +34,8 @@ httr::set_config(
 #modelo <- 'hb20'
 #pag <- 1
 #https://df.olx.com.br/autos-e-pecas/carros-vans-e-utilitarios/vw-volkswagen/gol?re=21&rs=20&me=&ms=
-url <- "https://df.olx.com.br/autos-e-pecas/carros-vans-e-utilitarios/fiat/uno"
+url <- "https://df.olx.com.br/autos-e-pecas/carros-vans-e-utilitarios/vw-volkswagen/gol?re=21&rs=20&me=&ms=" 
+  #"https://df.olx.com.br/autos-e-pecas/carros-vans-e-utilitarios/fiat/uno"
 ano_inicio <- "2002"
 ano_fim <- "2003"
 km_fim <- ""
@@ -56,65 +57,76 @@ scrap_olx <- function(uf, marca, modelo, ano_inicio , ano_fim ,
       result_get <- GET(url,query = list(me = km_fim,ms = km_inicio) ) 
     }else{
       result_get <- GET(url,query = list(re = metadados_filtros[[ano_fim]],
-                                rs = metadados_filtros[[ano_inicio]],
-                                me = km_fim,ms = km_inicio) )
+                                         rs = metadados_filtros[[ano_inicio]],
+                                         me = km_fim,ms = km_inicio) )
     }
     print(result_get$request$url)
     
-    ### CODIGO TEMPORARIO PORQUE OLX ESTÁ MUDANDO A PÃGINA
-    # AS VEZES LER TODAS AS INFOS, AS VEZES NÃO
+    ### CODIGO TEMPORARIO PORQUE OLX EST� MUDANDO A P�GINA
+    # AS VEZES LER TODAS AS INFOS, AS VEZES N�O
     pagina <- content(result_get,'text')
     pagina <- minimal_html(pagina)
     
-    #pagina <- read_html(url)
+    # CAPTURANDO LISTA DE ANUNCIOS
+    lista_anuncios = pagina %>% html_elements("ul#ad-list>li")
+    #lista_anuncios = lista_anuncios %>% html_elements("li")
     
-    lista_anuncios = pagina %>% html_elements("ul#ad-list")
-    lista_anuncios = lista_anuncios %>% html_elements("a")
+    links   = c()
+    titulos = c()
+    precos  = c()
+    kms  = c()
+    anos = c()
+    combust  = c()
+    cambio   = c()
+    df_final = data.frame()
     
-    x <- lista_anuncios %>% html_nodes("h3") #str_subset(regex("Preço"))
-    x
+    i <- 1
+    #anuncio <- lista_anuncios[i]
+    #anuncio %>% html_text()
     
-    
-    
-    
-    ids <- lista_anuncios %>% html_attr("data-lurker_list_id")
-    titulos <- lista_anuncios %>% html_nodes("h2") %>% html_text()
-    precos <- lista_anuncios %>% html_elements("span") %>% 
-      html_attr("aria-label") %>% 
-      str_subset(regex("Preço")) %>%
-      str_replace_all("Preço do item: R\\$ ","") %>%
-      str_replace_all("\\.","") %>% as.numeric()
-    links <- lista_anuncios %>% html_attr("href")
-    
-    lista_infos <- 
-      lista_anuncios %>%
-      html_elements(xpath = "//div[@aria-label='Informações sobre o anúncio:']") %>%
-      html_text() %>% str_replace_all("\\|\\s+$|\\s+","") %>%
-      str_trim() %>% str_split(pattern = "\\|") 
-     
-    kms <- c()
-    anos <- c()
-    cambio <- c()
-    combust <- c()
-    
-    for(x in lista_infos){
-      x <- lista_infos[1]
-      kms <- c(kms,as.numeric(str_replace_all("\\.|\\s+|km","",string = x[1]) ) )
-      anos <- c(anos,as.numeric( str_replace_all("\\s+","",string = x[2]) ) )
-      cambio <- c(cambio,str_replace_all("\\s+","",string = x[3]) )
-      combust <- c(combust,str_replace_all("\\s+","",string = x[4]) )
+    for(anuncio in lista_anuncios){
+      if (anuncio %>% html_attr("class") != "sponsored" & 
+          grepl("R\\$",anuncio %>% html_text2()) ){
+        #print(anuncio %>% html_text() )
+        
+        links <- c(links, anuncio %>% html_elements("a.horizontal") %>% 
+                     html_attr("href") )
+        
+        # CAPTURANDO LISTA DE TITULOS DOS ANUNCIOS
+        titulos <- c(titulos, anuncio %>% html_elements("h2") %>% html_text() )
+        
+        # CAPTURANDO LISTA DE PRECOS DOS ANUNCIOS
+        #xpath="//h3[@class='horizontal  price sc-ifAKCX bytyxL']"
+        precos <- c(precos, anuncio %>% html_element('.horizontal.price.sc-ifAKCX.bytyxL') %>%
+                      html_text2() %>% #.[i] %>% 
+                      str_replace_all("R\\$ ","") %>%
+                      str_replace_all("\\.","") %>% as.numeric() )
+        
+        # CAPTURANDO LISTA DE INFOS(KM, ANO, COMBUSTIVEL E CAMBIO)
+        #"//ul[@data-testid='labelGroup']"
+        #lista_infos <- 
+        lista_infos <-    anuncio %>%
+          html_elements("ul>li>span") %>% html_text2() #%>% paste(.,collapse = '\n') %>% str_split("\n")
+        
+        kms <- c(kms, as.numeric(str_replace_all("\\.|\\s+|km","",string = lista_infos[1]) )  )
+        anos <- c(anos, as.numeric( str_replace_all("\\s+","",string = lista_infos[2]) )  )
+        combust <- c(combust, str_replace_all("\\s+","",string = lista_infos[3])  )
+        cambio <- c(cambio, str_replace_all("\\s+","",string = lista_infos[4]) )
+        
+        #print(paste(i, length(titulos), length(precos), length(kms), 
+        #           length(anos), length(combust), length(cambio) ))
+        i <- i + 1
+      }  
     }
     
-    tipo <- c()
-    for (i in lista_anuncios %>% html_nodes(".sc-12rk7z2-15.efbgAg")){
-      r = i %>% html_text() %>% str_replace("Online","")
-      r = if_else(r == "",'Particular',r)
-      tipo = c(tipo,  r)
-    }
-    
-    df <- data.frame(ids,titulos,precos,links,kms,anos,cambio,combust,tipo )
+    # CRIANDO DF FINAL
+    df <- data.frame(titulos,precos,links,kms,anos,cambio,combust)
     df_final <- rbind(df_final,df)
+    df_final <- df_final %>% filter(precos > 0)
     Sys.sleep(time = 2)
   }
   return(df_final)
 }
+
+
+

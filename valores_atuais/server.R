@@ -3,53 +3,54 @@
 shinyServer(function(input, output,session) {
   #shinyjs::toggle(id = "graficos")
   #outputOptions(output, 'graficos')
+
   
-  observe({
-    #shinyjs::hide(id = "graficos")
-    #shinyjs::disable("idExecuta")
-    x <- dados %>% filter(  MARCA == input$idMarca )
-    updateSelectInput(session,inputId =  "idVeic",
-                      label = 'Veículo:',
-                      choices = unique(x$MODELO) ) 
-  })
-  
-  
-  observeEvent(input$idVeic, ignoreInit = TRUE, {
-    #x <- dados %>% filter(grepl(paste0('\\b',input$idVeic,'\\b'), MODELO_ORIGIN))
-    x <- dados %>% filter(input$idVeic == MODELO )
-    
-    modelos <- c("")    
-    potencia <- c("")
-    
-    if( nrow(x) > 0){
-      potencia <- sort( unique(x$POTENCIA))
-      ufs <- sort( unique(x$UF))
-      modelos <- sort( unique(x$MODELO_ORIGIN))
-    }
-    updateSelectInput(session,"idModelos","Modelo:", 
-                      choices = modelos
-    )
-    
-    updateSelectInput(session,"idPot","Potência:", 
-                      choices = potencia
-    )
-    
-  })
-  
-  observeEvent(input$idPot, ignoreInit = TRUE, {
-    print(input$idPot)
-    #x <- dados %>% filter(MODELO_ORIGIN == input$idModelos)
-    x <- dados %>% filter(MODELO == input$idVeic & 
-                            POTENCIA == input$idPot)
-    ano <- c("")
-    print(nrow(x))
-    if( nrow(x) > 0){
-      ano <- sort( unique(x$ANO))
-    }
-    updateSelectInput(session,"idAno","Ano do automóvel:", 
-                      choices = sort(unique(x$ANO)))
-     
-  })
+  #observe({
+  #  #shinyjs::hide(id = "graficos")
+  #  #shinyjs::disable("idExecuta")
+  #  x <- dados %>% filter(  MARCA == input$idMarca )
+  #  updateSelectInput(session,inputId =  "idVeic",
+  #                    label = 'Veículo:',
+  #                    choices = unique(x$MODELO) ) 
+  #})
+  #
+  #
+  #observeEvent(input$idVeic, ignoreInit = TRUE, {
+  #  #x <- dados %>% filter(grepl(paste0('\\b',input$idVeic,'\\b'), MODELO_ORIGIN))
+  #  x <- dados %>% filter(input$idVeic == MODELO )
+  #  
+  #  modelos <- c("")    
+  #  potencia <- c("")
+  #  
+  #  if( nrow(x) > 0){
+  #    potencia <- sort( unique(x$POTENCIA))
+  #    ufs <- sort( unique(x$UF))
+  #    modelos <- sort( unique(x$MODELO_ORIGIN))
+  #  }
+  #  updateSelectInput(session,"idModelos","Modelo:", 
+  #                    choices = modelos
+  #  )
+  #  
+  #  updateSelectInput(session,"idPot","Potência:", 
+  #                    choices = potencia
+  #  )
+  #  
+  #})
+  #
+  #observeEvent(input$idPot, ignoreInit = TRUE, {
+  #  print(input$idPot)
+  #  #x <- dados %>% filter(MODELO_ORIGIN == input$idModelos)
+  #  x <- dados %>% filter(MODELO == input$idVeic & 
+  #                          POTENCIA == input$idPot)
+  #  ano <- c("")
+  #  print(nrow(x))
+  #  if( nrow(x) > 0){
+  #    ano <- sort( unique(x$ANO))
+  #  }
+  #  updateSelectInput(session,"idAno","Ano do automóvel:", 
+  #                    choices = sort(unique(x$ANO)))
+  #   
+  #})
   
   observeEvent(input$idAno, ignoreInit = TRUE, {
     #x <- dados %>% filter(MODELO_ORIGIN == input$idModelos & ANO == input$idAno)
@@ -180,7 +181,7 @@ shinyServer(function(input, output,session) {
   })
   
   output$grafico_pie_direcao <- renderPlotly({
-    ## frequencia por DIREÇÃO(GRÁFICO DE PIZZA) ####
+    # frequencia por DIREÇÃO(GRÁFICO DE PIZZA) ####
     freq_direcao <- dados_select() %>% 
       group_by(DIREÇÃO) %>%
       summarise(qtd = n()) %>%
@@ -207,12 +208,10 @@ shinyServer(function(input, output,session) {
 
   
 ####### SERVER DASH PREÇO ATUAL ####
-
-  
   observe({
       output$dashPrecoAtual <- renderUI({
         filtro_preco_atual()
-      }) 
+      })
       output$graficosPrecoAtual <- renderUI({
         dash_preco_atual()
       })
@@ -246,10 +245,15 @@ shinyServer(function(input, output,session) {
                                  input$idKm1,input$idKm2)
       #resulta_scrap <- resulta_scrap %>% replace(is.na(.),0)
       
-      print(nrow(resulta_scrap))
-      
+      qtdLinhas = nrow(resulta_scrap)
+      if (qtdLinhas > 0){
+        print(qtdLinhas)
+        shinyjs::hide(id = "msg",anim = T)
+      }else{
+        shinyjs::show(id = "msg",anim = T)
+      }
       output$tabelaDados <- renderDataTable( 
-        resulta_scrap,options = list(pageLength = 5)
+        resulta_scrap,options = list(pageLength = 10)
       )
       output$qtd <- renderInfoBox( 
         infoBox(title = '',subtitle = 'QTD Anúncios',
@@ -358,6 +362,7 @@ shinyServer(function(input, output,session) {
                 showlegend = FALSE) %>%
           layout(title = ' TIPO ANÚNCIO')
       }) 
+      
       output$grafico_tipo_valor2 <- renderPlotly({
         ggplotly(resulta_scrap %>%
                    ggplot()+
@@ -398,6 +403,7 @@ shinyServer(function(input, output,session) {
   })
   
   #### SERVER INFOS ####
+  # monta o menu de INFORMAÇÕES sobre a página(app)
   output$info <- renderUI({
     infos()
   })
